@@ -22,12 +22,14 @@ function run(p: Uint8Array, inp: Uint8Array): { out: Uint8Array; code: number } 
   const n = p.length;
   const op = new Int8Array(n); // -1 unknown opcode, -2 immediate cut off by the program's end
   const ag = new Int32Array(n);
+  const NX = new Int32Array(n); // address of the next instruction, precomputed per position
   for (let i = 0; i < n; i++) {
     const id = bid(p[i]);
     if (id < 0) { op[i] = -1; continue; }
     const L = IL[id];
     if (i + L >= n) { op[i] = -2; continue; }
     op[i] = id;
+    NX[i] = i + 1 + L;
     if (id === 1) ag[i] = (p[i + 1] << 24) >> 24;
     else if (id === 2) ag[i] = p[i + 1] | (p[i + 2] << 8) | (p[i + 3] << 16) | (p[i + 4] << 24);
     else if (id >= 26 && id <= 28) ag[i] = ((p[i + 1] | (p[i + 2] << 8)) << 16) >> 16;
@@ -46,7 +48,7 @@ function run(p: Uint8Array, inp: Uint8Array): { out: Uint8Array; code: number } 
     if (o < 0) return end(o === -1 ? 5 : 9);
     const a = ag[pc];
     steps++;
-    const nx = pc + 1 + IL[o];
+    const nx = NX[pc];
     if (sp < PO[o]) return end(2);
     if (sp - PO[o] + PU[o] > 256) return end(3);
     pc = nx;
